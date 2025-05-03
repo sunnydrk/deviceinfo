@@ -1,171 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Advanced Device Info Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
-  <style>
-    body {
-      background: #0d0d0d;
-      color: #0f0;
-      font-family: 'Orbitron', sans-serif;
-      padding: 30px;
-    }
+          <div class="container">
+        <h1>URL Extractor</h1>
+        <input type="text" id="urlInput" placeholder="Enter the URL with https://">
+        <button id="extractButton" onclick="extractUrls()">Extract URLs</button>
+        <div id="urlList"></div>
+    </div>
 
-    h1 {
-      text-align: center;
-      color: #00ffff;
-      margin-bottom: 40px;
-    }
+    <script>
+        async function extractUrls() {
+            const urlInput = document.getElementById('urlInput').value;
+            if (!urlInput) {
+                alert('Please enter a URL.');
+                return;
+            }
 
-    .info-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 20px;
-    }
+            try {
+                const response = await fetch('https://yourgpt.ai/api/extractUrls', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ url: urlInput })
+                });
 
-    .card {
-      background: #1a1a1a;
-      border: 1px solid #00ff99;
-      border-radius: 12px;
-      padding: 20px;
-      box-shadow: 0 0 15px rgba(0,255,0,0.2);
-    }
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
 
-    .label {
-      color: #aaa;
-      font-size: 14px;
-    }
+                const data = await response.json();
+                displayUrls(data.urls);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
 
-    .value {
-      font-size: 16px;
-      margin-top: 4px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Device Info Dashboard</h1>
-  <div class="info-container" id="infoContainer"></div>
+        function displayUrls(urls) {
+            const urlList = document.getElementById('urlList');
+            urlList.innerHTML = '<ul></ul>';
 
-  <script>
-    const info = [];
-
-    const pushInfo = (label, value) => {
-      info.push({ label, value });
-    };
-
-    // Basic Info
-    pushInfo("User Agent", navigator.userAgent);
-    pushInfo("Platform", navigator.platform);
-    pushInfo("Language", navigator.language);
-    pushInfo("Timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
-    pushInfo("Screen Size", screen.width + "x" + screen.height);
-    pushInfo("Viewport", window.innerWidth + "x" + window.innerHeight);
-    pushInfo("Touch Support", 'ontouchstart' in window || navigator.maxTouchPoints > 0 ? "Yes" : "No");
-
-    // Network
-    pushInfo("Online Status", navigator.onLine ? "Online" : "Offline");
-    const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-    if (conn) {
-      pushInfo("Connection Type", conn.effectiveType);
-    }
-
-    // Hardware
-    pushInfo("RAM (approx.)", navigator.deviceMemory ? navigator.deviceMemory + " GB" : "Unknown");
-    pushInfo("CPU Threads", navigator.hardwareConcurrency || "Unknown");
-
-    // Battery
-    if ('getBattery' in navigator) {
-      navigator.getBattery().then(battery => {
-        pushInfo("Battery Level", Math.round(battery.level * 100) + "%");
-        renderInfo();
-      });
-    }
-
-    // Clipboard
-    if (navigator.clipboard) {
-      navigator.clipboard.readText().then(text => {
-        if (text) pushInfo("Clipboard Text", text.substring(0, 100) + (text.length > 100 ? "..." : ""));
-      }).catch(() => {});
-    }
-
-    // WebGL Renderer
-    try {
-      const canvas = document.createElement("canvas");
-      const gl = canvas.getContext("webgl");
-      const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
-      const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
-      const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
-      pushInfo("GPU Vendor", vendor);
-      pushInfo("GPU Renderer", renderer);
-    } catch (e) {}
-
-    // Storage
-    pushInfo("Local Storage", typeof localStorage !== "undefined" ? "Available" : "Not Supported");
-    pushInfo("Session Storage", typeof sessionStorage !== "undefined" ? "Available" : "Not Supported");
-    pushInfo("Cookies Enabled", navigator.cookieEnabled ? "Yes" : "No");
-
-    // Permissions
-    if (navigator.permissions) {
-      navigator.permissions.query({ name: 'geolocation' }).then(p => {
-        pushInfo("Location Permission", p.state);
-        renderInfo();
-      });
-      navigator.permissions.query({ name: 'camera' }).then(p => {
-        pushInfo("Camera Permission", p.state);
-        renderInfo();
-      });
-      navigator.permissions.query({ name: 'microphone' }).then(p => {
-        pushInfo("Microphone Permission", p.state);
-        renderInfo();
-      });
-    }
-
-    // Vibrate support
-    pushInfo("Vibration Support", "vibrate" in navigator ? "Yes" : "No");
-
-    // Referrer
-    pushInfo("Referrer", document.referrer || "None");
-
-    // Location (optional)
-    if ("geolocation" in navigator) {
-      navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude.toFixed(4);
-        const lon = pos.coords.longitude.toFixed(4);
-        pushInfo("Location (Lat, Lon)", `${lat}, ${lon}`);
-        renderInfo();
-      }, err => {
-        pushInfo("Location", "Permission Denied");
-        renderInfo();
-      });
-    }
-
-    // Public IP Address
-    fetch('https://api.ipify.org?format=json')
-      .then(response => response.json())
-      .then(data => {
-        pushInfo("Public IP Address", data.ip);
-        renderInfo();
-      })
-      .catch(error => {
-        pushInfo("Public IP Address", "Unable to retrieve");
-        renderInfo();
-      });
-
-    // Render function
-    function renderInfo() {
-      const container = document.getElementById("infoContainer");
-      container.innerHTML = "";
-      info.forEach(item => {
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `<div class="label">${item.label}</div><div class="value">${item.value}</div>`;
-        container.appendChild(card);
-      });
-    }
-
-    // Initial render
-    renderInfo();
-  </script>
+            const ul = urlList.querySelector('ul');
+            urls.forEach(url => {
+                const li = document.createElement('li');
+                li.textContent = url;
+                ul.appendChild(li);
+            });
+        }
+    </script>
 </body>
 </html>

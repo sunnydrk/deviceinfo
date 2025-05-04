@@ -1,2 +1,2 @@
 check device online info
-visit site : https://github.com/sunnydrk/deviceinfo
+visit site : https://sunnydrk.github.io/deviceinfo/
